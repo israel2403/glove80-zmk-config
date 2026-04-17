@@ -1,7 +1,35 @@
 /*
  * Copyright (c) 2020 The ZMK Contributors
+ * Copyright (c) 2026 isra
  *
  * SPDX-License-Identifier: MIT
+ *
+ * Glove80 keymap tailored for a backend / Neovim / tmux workflow on Linux.
+ *
+ * Layers:
+ *   0 DEFAULT       QWERTY + home-row mods (GACS)
+ *   1 NAV           Vim-style arrows, Home/End, PgUp/PgDn, word jumps
+ *   2 SYM           brackets, operators, shell symbols, =>/->
+ *   3 SYS           tmux macros + F-keys + media + BT (replaces stock LOWER)
+ *   4 MAGIC         stock system/RGB layer
+ *   5 FACTORY_TEST  stock factory test pattern (kept for safety)
+ *
+ * Thumb layer-taps:
+ *   SPACE (right inner) : tap=SPACE, hold=NAV
+ *   RET   (right inner) : tap=RET,   hold=SYM
+ *   ESC   (center)      : tap=ESC,   hold=SYS     (was tap-dance LOWER)
+ *
+ * Combos:
+ *   j + k -> ESC
+ *   w + q -> :wq<CR>
+ *
+ * Key position map (0-indexed, for combo authoring):
+ *   Row 1 (F1..F10):                       0..9
+ *   Row 2 (= 1..5   6..0 -):              10..21
+ *   Row 3 (TAB Q..T   Y..P \):            22..33
+ *   Row 4 (ESC A..G   H..; '):            34..45
+ *   Row 5 (` Z..B  thumbs  N../ PGUP):    46..63
+ *   Row 6 (MGC HOME..RIGHT  thumbs  UP DOWN [ ] PGDN): 64..79
  */
 
 #include <behaviors.dtsi>
@@ -14,23 +42,72 @@
 #define HYPER LC(LS(LG(LALT)))
 
 // layers
-#define DEFAULT 0
-#define LOWER 1
-#define MAGIC 2
-#define FACTORY_TEST 3
+#define DEFAULT      0
+#define NAV          1
+#define SYM          2
+#define SYS          3
+#define MAGIC        4
+#define FACTORY_TEST 5
+
+// key position groups for bilateral HRM (hold-trigger-key-positions)
+#define LEFT_KEYS  \
+    10 11 12 13 14 15 \
+    22 23 24 25 26 27 \
+    34 35 36 37 38 39 \
+    46 47 48 49 50 51 \
+    64 65 66 67 68
+#define RIGHT_KEYS \
+    16 17 18 19 20 21 \
+    28 29 30 31 32 33 \
+    40 41 42 43 44 45 \
+    58 59 60 61 62 63 \
+    75 76 77 78 79
+#define THUMB_KEYS \
+    52 53 54 55 56 57 \
+    69 70 71 72 73 74
 
 / {
     behaviors {
-        // For the "layer" key, it'd nice to be able to use it as either a shift or a toggle.
-        // Configure it as a tap dance, so the first tap (or hold) is a &mo and the second tap is a &to
-        layer_td: tap_dance_0 {
-            compatible = "zmk,behavior-tap-dance";
-            label = "LAYER_TAP_DANCE";
-            #binding-cells = <0>;
-            tapping-term-ms = <200>;
-            bindings = <&mo LOWER>, <&to LOWER>;
+        // Bilateral home-row mod on the LEFT hand.
+        hml: home_row_mod_left {
+            compatible = "zmk,behavior-hold-tap";
+            label = "HOME_ROW_MOD_LEFT";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <220>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <125>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <RIGHT_KEYS THUMB_KEYS>;
+            hold-trigger-on-release;
         };
 
+        // Bilateral home-row mod on the RIGHT hand.
+        hmr: home_row_mod_right {
+            compatible = "zmk,behavior-hold-tap";
+            label = "HOME_ROW_MOD_RIGHT";
+            #binding-cells = <2>;
+            flavor = "tap-preferred";
+            tapping-term-ms = <220>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <125>;
+            bindings = <&kp>, <&kp>;
+            hold-trigger-key-positions = <LEFT_KEYS THUMB_KEYS>;
+            hold-trigger-on-release;
+        };
+
+        // Balanced layer-tap for thumb keys.
+        ltb: layer_tap_balanced {
+            compatible = "zmk,behavior-hold-tap";
+            label = "LAYER_TAP_BALANCED";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <175>;
+            bindings = <&mo>, <&kp>;
+        };
+
+        // Stock magic key behavior.
         magic: magic_hold_tap {
             compatible = "zmk,behavior-hold-tap";
             label = "MAGIC_HOLD_TAP";
@@ -42,48 +119,150 @@
     };
 
     macros {
+        // stock system macros
         rgb_ug_status_macro: rgb_ug_status_macro_0 {
             label = "RGB_UG_STATUS";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings
-                = <&rgb_ug RGB_STATUS>;
+            bindings = <&rgb_ug RGB_STATUS>;
         };
-
         bt_0: bt_profile_macro_0 {
             label = "BT_0";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings
-                = <&out OUT_BLE>,
-                  <&bt BT_SEL 0>;
+            bindings = <&out OUT_BLE>, <&bt BT_SEL 0>;
         };
-
         bt_1: bt_profile_macro_1 {
             label = "BT_1";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings
-                = <&out OUT_BLE>,
-                  <&bt BT_SEL 1>;
+            bindings = <&out OUT_BLE>, <&bt BT_SEL 1>;
         };
-
         bt_2: bt_profile_macro_2 {
             label = "BT_2";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings
-                = <&out OUT_BLE>,
-                  <&bt BT_SEL 2>;
+            bindings = <&out OUT_BLE>, <&bt BT_SEL 2>;
         };
-
         bt_3: bt_profile_macro_3 {
             label = "BT_3";
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            bindings
-                = <&out OUT_BLE>,
-                  <&bt BT_SEL 3>;
+            bindings = <&out OUT_BLE>, <&bt BT_SEL 3>;
+        };
+
+        // tmux prefix = Ctrl+B
+        tmux_pre: tmux_pre {
+            label = "TMUX_PRE";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>;
+        };
+
+        tmux_prev: tmux_prev {
+            label = "TMUX_PREV";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp P>;
+        };
+
+        tmux_next: tmux_next {
+            label = "TMUX_NEXT";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp N>;
+        };
+
+        tmux_splv: tmux_splv {
+            label = "TMUX_SPLV";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp DQT>;
+        };
+
+        tmux_splh: tmux_splh {
+            label = "TMUX_SPLH";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp PRCNT>;
+        };
+
+        tmux_zoom: tmux_zoom {
+            label = "TMUX_ZOOM";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp Z>;
+        };
+
+        tmux_new: tmux_new {
+            label = "TMUX_NEW";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp LC(B)>, <&kp C>;
+        };
+
+        // =>
+        arrow_fat: arrow_fat {
+            label = "ARROW_FAT";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp EQUAL>, <&kp GT>;
+        };
+
+        // ->
+        arrow_thin: arrow_thin {
+            label = "ARROW_THIN";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp MINUS>, <&kp GT>;
+        };
+
+        // :wq<CR>
+        vim_wq: vim_wq {
+            label = "VIM_WQ";
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <5>;
+            tap-ms = <5>;
+            bindings = <&kp COLON>, <&kp W>, <&kp Q>, <&kp RET>;
+        };
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        combo_esc {
+            timeout-ms = <45>;
+            key-positions = <41 42>;
+            bindings = <&kp ESC>;
+            layers = <DEFAULT>;
+            require-prior-idle-ms = <125>;
+        };
+
+        combo_wq {
+            timeout-ms = <60>;
+            key-positions = <23 24>;
+            bindings = <&vim_wq>;
+            layers = <DEFAULT>;
+            require-prior-idle-ms = <150>;
         };
     };
 
@@ -91,43 +270,57 @@
         compatible = "zmk,keymap";
 
         default_layer {
-            // ---------------------------------------------------------------------------------------------------------------------------------
-            // |  F1   |  F2 |  F3 |  F4  |  F5  |                                                               |  F6   |  F7   |  F8  |   F9  |  F10 |
-            // |  =    |  1  |  2  |  3   |  4   |  5   |                                                 |  6   |   7   |   8   |  9   |   0   |   -  |
-            // |  TAB  |  Q  |  W  |  E   |  R   |  T   |                                                 |  Y   |   U   |   I   |  O   |   P   |   \  |
-            // |  ESC  |  A  |  S  |  D   |  F   |  G   |                                                 |  H   |   J   |   K   |  L   |   ;   |   '  |
-            // |   `   |  Z  |  X  |  C   |  V   |  B   | LSHFT | LCTRL | LOWER | | LGUI  | RCTRL | RSHFT |  N   |   M   |   ,   |  .   |   /   | PGUP |
-            // | MAGIC | HOME| END | LEFT | RIGHT|      | BSPC  | DEL   | LALT  | | RALT  | RET   | SPACE |      |  UP   | DOWN  |  [   |   ]   | PGDN |
-
             bindings = <
-            &kp F1         &kp F2   &kp F3      &kp F4      &kp F5                                                                                         &kp F6  &kp F7      &kp F8      &kp F9      &kp F10
-            &kp EQUAL      &kp N1   &kp N2      &kp N3      &kp N4      &kp N5                                                                     &kp N6  &kp N7  &kp N8      &kp N9      &kp N0      &kp MINUS
-            &kp TAB        &kp Q    &kp W       &kp E       &kp R       &kp T                                                                      &kp Y   &kp U   &kp I       &kp O       &kp P       &kp BSLH
-            &kp ESC        &kp A    &kp S       &kp D       &kp F       &kp G                                                                      &kp H   &kp J   &kp K       &kp L       &kp SEMI    &kp SQT
-            &kp GRAVE      &kp Z    &kp X       &kp C       &kp V       &kp B   &kp LSHFT   &kp LCTRL   &layer_td  &kp LGUI  &kp RCTRL &kp RSHFT   &kp N   &kp M   &kp COMMA   &kp DOT     &kp FSLH    &kp PG_UP
-            &magic MAGIC 0 &kp HOME &kp END     &kp LEFT    &kp RIGHT           &kp BSPC    &kp DEL     &kp LALT   &kp RALT  &kp RET   &kp SPACE           &kp UP  &kp DOWN    &kp LBKT    &kp RBKT    &kp PG_DN
+            &kp F1         &kp F2       &kp F3       &kp F4       &kp F5                                                                                                       &kp F6   &kp F7       &kp F8       &kp F9       &kp F10
+            &kp EQUAL      &kp N1       &kp N2       &kp N3       &kp N4       &kp N5                                                                                &kp N6   &kp N7   &kp N8       &kp N9       &kp N0       &kp MINUS
+            &kp TAB        &kp Q        &kp W        &kp E        &kp R        &kp T                                                                                 &kp Y    &kp U    &kp I        &kp O        &kp P        &kp BSLH
+            &kp ESC        &hml LGUI A  &hml LALT S  &hml LCTRL D &hml LSHFT F &kp G                                                                                 &kp H    &hmr RSHFT J &hmr RCTRL K &hmr RALT L &hmr RGUI SEMI &kp SQT
+            &kp GRAVE      &kp Z        &kp X        &kp C        &kp V        &kp B  &kp LSHFT &kp LCTRL &ltb SYS ESC   &kp LGUI  &kp RCTRL &kp RSHFT               &kp N    &kp M    &kp COMMA    &kp DOT      &kp FSLH     &kp PG_UP
+            &magic MAGIC 0 &kp HOME     &kp END      &kp LEFT     &kp RIGHT           &kp BSPC  &kp DEL   &kp LALT       &kp RALT  &ltb SYM RET &ltb NAV SPACE                 &kp UP   &kp DOWN     &kp LBKT     &kp RBKT     &kp PG_DN
             >;
         };
 
-        lower_layer {
+        nav_layer {
             bindings = <
-            &kp C_BRI_DN      &kp C_BRI_UP        &kp C_PREV      &kp C_NEXT      &kp C_PP                                                                                                           &kp C_MUTE   &kp C_VOL_DN &kp C_VOL_UP  &none           &kp PAUSE_BREAK
-            &trans            &none               &none           &none           &none           &kp HOME                                                                              &kp LPAR     &kp KP_NUM   &kp KP_EQUAL &kp KP_DIVIDE &kp KP_MULTIPLY &kp PSCRN
-            &trans            &none               &none           &kp UP          &none           &kp END                                                                               &kp RPAR     &kp KP_N7    &kp KP_N8    &kp KP_N9     &kp KP_MINUS    &kp SLCK
-            &trans            &none               &kp LEFT        &kp DOWN        &kp RIGHT       &kp PG_UP                                                                             &kp PRCNT    &kp KP_N4    &kp KP_N5    &kp KP_N6     &kp KP_PLUS     &none
-            &trans            &kp K_CMENU         &none           &kp F11         &kp F12         &kp PG_DN       &trans      &trans      &to DEFAULT &trans      &trans      &trans    &kp COMMA    &kp KP_N1    &kp KP_N2    &kp KP_N3     &kp KP_ENTER    &trans
-            &trans            &kp CAPS            &kp INS         &kp F11         &kp F12                         &trans      &trans      &trans      &trans      &trans      &trans                 &kp KP_N0    &kp KP_N0    &kp KP_DOT    &kp KP_ENTER    &trans
+            &trans     &trans    &trans    &trans    &trans                                                                                                &trans       &trans       &trans       &trans       &trans
+            &trans     &trans    &trans    &trans    &trans    &trans                                                                           &trans     &trans       &trans       &trans       &trans       &trans
+            &trans     &trans    &trans    &trans    &trans    &trans                                                                           &kp HOME   &kp PG_DN    &kp PG_UP    &kp END      &trans       &trans
+            &trans     &kp LGUI  &kp LALT  &kp LCTRL &kp LSHFT &trans                                                                           &kp LEFT   &kp DOWN     &kp UP       &kp RIGHT    &kp DEL      &trans
+            &trans     &trans    &trans    &trans    &trans    &trans    &trans    &trans    &trans       &trans    &trans    &trans           &kp LC(LEFT) &kp LC(DOWN) &kp LC(UP)  &kp LC(RIGHT) &trans      &trans
+            &trans     &trans    &trans    &trans    &trans              &trans    &trans    &trans       &trans    &trans    &trans                       &trans       &trans       &trans       &trans       &trans
+            >;
+        };
+
+        sym_layer {
+            bindings = <
+            &trans     &trans    &trans    &trans    &trans                                                                                                &trans       &trans       &trans       &trans       &trans
+            &trans     &trans    &trans    &trans    &trans    &trans                                                                           &trans     &trans       &trans       &trans       &trans       &trans
+            &trans     &kp EXCL  &kp AT    &kp HASH  &kp DLLR  &kp PRCNT                                                                        &kp CARET  &kp AMPS     &kp STAR     &kp LPAR     &kp RPAR     &kp TILDE
+            &trans     &kp GRAVE &kp LBRC  &kp LPAR  &kp LBKT  &kp PIPE                                                                         &kp MINUS  &kp EQUAL    &kp PLUS     &arrow_fat   &arrow_thin  &kp BSLH
+            &trans     &trans    &kp RBRC  &kp RPAR  &kp RBKT  &kp LT    &trans    &trans    &trans       &trans    &trans    &trans           &kp UNDER  &kp COLON    &kp SEMI     &kp DQT      &kp SQT      &trans
+            &trans     &trans    &trans    &trans    &trans              &trans    &trans    &trans       &trans    &trans    &trans                       &trans       &trans       &trans       &trans       &trans
+            >;
+        };
+
+        sys_layer {
+            bindings = <
+            &kp F1     &kp F2    &kp F3    &kp F4    &kp F5                                                                                                &kp F6       &kp F7       &kp F8       &kp F9       &kp F10
+            &kp F11    &kp F12   &trans    &trans    &trans    &trans                                                                           &trans     &trans       &trans       &trans       &trans       &trans
+            &trans     &tmux_pre &tmux_new &tmux_prev &tmux_next &trans                                                                          &trans     &kp C_VOL_DN &kp C_MUTE   &kp C_VOL_UP &kp C_BRI_DN &kp C_BRI_UP
+            &trans     &tmux_zoom &tmux_splv &tmux_splh &trans   &trans                                                                          &trans     &kp C_PREV   &kp C_PP     &kp C_NEXT   &kp CAPS     &trans
+            &trans     &trans    &trans    &trans    &trans    &trans    &trans    &trans    &to DEFAULT  &trans    &trans    &trans           &trans     &bt_0        &bt_1        &bt_2        &bt_3        &bt BT_CLR
+            &sys_reset &trans    &trans    &trans    &trans              &trans    &trans    &trans       &trans    &trans    &trans                       &trans       &out OUT_USB &out OUT_BLE &trans       &bootloader
             >;
         };
 
         magic_layer {
             bindings = <
-            &bt BT_CLR        &none               &none           &none           &none                                                                                                           &none      &none      &none      &none      &bt BT_CLR_ALL
-            &none             &none               &none           &none           &none           &none                                                                                &none      &none      &none      &none      &none      &none
-            &none             &rgb_ug RGB_SPI     &rgb_ug RGB_SAI &rgb_ug RGB_HUI &rgb_ug RGB_BRI &rgb_ug RGB_TOG                                                                      &none      &none      &none      &none      &none      &none
-            &bootloader       &rgb_ug RGB_SPD     &rgb_ug RGB_SAD &rgb_ug RGB_HUD &rgb_ug RGB_BRD &rgb_ug RGB_EFF                                                                      &none      &none      &none      &none      &none      &bootloader
-            &sys_reset        &none               &none           &none           &none           &none           &bt_2     &bt_3     &none            &none     &none     &none       &none      &none      &none      &none      &none      &sys_reset
-            &none             &none               &none           &none           &none                           &bt_0     &bt_1     &out OUT_USB     &none     &none     &none                  &none      &none      &none      &none      &to FACTORY_TEST
+            &bt BT_CLR  &none           &none           &none           &none                                                                                                          &none &none &none &none &bt BT_CLR_ALL
+            &none       &none           &none           &none           &none           &none                                                                                &none     &none &none &none &none &none
+            &none       &rgb_ug RGB_SPI &rgb_ug RGB_SAI &rgb_ug RGB_HUI &rgb_ug RGB_BRI &rgb_ug RGB_TOG                                                                      &none     &none &none &none &none &none
+            &bootloader &rgb_ug RGB_SPD &rgb_ug RGB_SAD &rgb_ug RGB_HUD &rgb_ug RGB_BRD &rgb_ug RGB_EFF                                                                      &none     &none &none &none &none &bootloader
+            &sys_reset  &none           &none           &none           &none           &none           &bt_2     &bt_3     &none            &none     &none     &none       &none     &none &none &none &none &sys_reset
+            &none       &none           &none           &none           &none                           &bt_0     &bt_1     &out OUT_USB     &none     &none     &none                 &none &none &none &none &to FACTORY_TEST
             >;
         };
 
